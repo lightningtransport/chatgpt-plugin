@@ -2,19 +2,34 @@ import { createServer as createHttpServer, IncomingMessage, ServerResponse } fro
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { loadConfig } from "./config.js";
+import { type Config, loadConfig } from "./config.js";
 import { loadDocuments } from "./knowledge.js";
 import { ReportingClient } from "./reporting-client.js";
 import { registerTools } from "./tools.js";
 
-const config = loadConfig();
-const documents = await loadDocuments(config.REPORTING_KNOWLEDGE_ROOT);
-const client = new ReportingClient(config);
-const jwks = config.OAUTH_JWKS_URL ? createRemoteJWKSet(new URL(config.OAUTH_JWKS_URL)) : undefined;
+type Runtime = {
+  config: Config;
+  documents: Map<string, string>;
+  client: ReportingClient;
+  jwks: ReturnType<typeof createRemoteJWKSet> | undefined;
+};
+
+let runtimePromise: Promise<Runtime> | undefined;
 let callsInWindow = 0;
 let windowStarted = Date.now();
 
-export function createMcpServer(): McpServer {
+function getRuntime(): Promise<Runtime> {
+  runtimePromise ??= (async () => {
+    const config = loadConfig();
+    const documents = await loadDocuments(config.REPORTING_KNOWLEDGE_ROOT);
+    const client = new ReportingClient(config);
+    const jwks = config.OAUTH_JWKS_URL ? createRemoteJWKSet(new URL(config.OAUTH_JWKS_URL)) : undefined;
+    return { config, documents, client, jwks };
+  })();
+  return runtimePromise;
+}
+
+export function createMcpServer(client: ReportingClient, documents: Map<string, string>): McpServer {
   const server = new McpServer(
     { name: "lightning-transport-reporting", version: "0.2.0" },
     {
@@ -36,6 +51,7 @@ const httpServer = createHttpServer(async (request: IncomingMessage, response: S
     if (request.url === "/health" && request.method === "GET") {
       return sendJson(response, 200, { status: "ok" });
     }
+    const { config, documents, client, jwks } = await getRuntime();
     if (request.url === "/.well-known/oauth-protected-resource" && request.method === "GET") {
       if (config.MCP_AUTH_MODE !== "oauth") return sendJson(response, 404, { error: "OAuth is not enabled." });
       return sendJson(response, 200, {
@@ -45,8 +61,8 @@ const httpServer = createHttpServer(async (request: IncomingMessage, response: S
       });
     }
     if (!request.url?.startsWith("/mcp")) return sendJson(response, 404, { error: "Not found." });
-    if (!rateLimit()) return sendJson(response, 429, { error: "Too many requests." });
-    const auth = await authenticate(request);
+    if (!rateLimit(config)) return sendJson(response, 429, { error: "Too many requests." });
+    const auth = await authenticate(request, config, jwks);
     if (!auth.ok) return sendAuthChallenge(response, auth.message ?? "Authentication required.");
 
     const body = await readBody(request);
@@ -54,7 +70,7 @@ const httpServer = createHttpServer(async (request: IncomingMessage, response: S
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
     });
-    const server = createMcpServer();
+    const server = createMcpServer(client, documents);
     await server.connect(transport);
     await transport.handleRequest(request, response, body ? JSON.parse(body) : undefined);
   } catch (error) {
@@ -65,12 +81,17 @@ const httpServer = createHttpServer(async (request: IncomingMessage, response: S
 });
 
 if (process.env.NODE_ENV !== "test" && process.env.VERCEL !== "1") {
+  const config = loadConfig();
   httpServer.listen(config.PORT, "0.0.0.0", () => {
     console.log(JSON.stringify({ event: "mcp_server_started", port: config.PORT, endpoint: "/mcp", authMode: config.MCP_AUTH_MODE }));
   });
 }
 
-async function authenticate(request: IncomingMessage): Promise<{ ok: boolean; message?: string }> {
+async function authenticate(
+  request: IncomingMessage,
+  config: Config,
+  jwks: Runtime["jwks"],
+): Promise<{ ok: boolean; message?: string }> {
   if (config.MCP_AUTH_MODE === "development") return { ok: true };
   const value = request.headers.authorization;
   if (!value?.startsWith("Bearer ") || !jwks || !config.OAUTH_ISSUER || !config.OAUTH_AUDIENCE) {
@@ -96,7 +117,7 @@ async function authenticate(request: IncomingMessage): Promise<{ ok: boolean; me
   }
 }
 
-function rateLimit(): boolean {
+function rateLimit(config: Config): boolean {
   const now = Date.now();
   if (now - windowStarted >= 60_000) {
     windowStarted = now;

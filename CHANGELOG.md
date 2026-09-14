@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- Fix Vercel production rebuilds when `NODE_ENV=production` is set: install TypeScript (`--include=dev`), keep `typescript` as a dependency, and invoke `npx tsc` so `npm run build` finds the local compiler.
+- Keep the Node.js entry (`framework: "node"`, root `server.ts` listen + default export) and serve `/health` without requiring full runtime config.
+
 ## 0.2.1
 
 - Fix Vercel production builds: deploy as a Node.js HTTP server (`framework: "node"`) instead of a static site looking for `public/`.
