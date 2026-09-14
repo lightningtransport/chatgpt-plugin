@@ -61,6 +61,18 @@ describe("HTTP endpoints", () => {
     }
   });
 
+  it("serves /health when the URL has a query string", async () => {
+    const previous = process.env.AGENT_REPORTING_KEY;
+    delete process.env.AGENT_REPORTING_KEY;
+    try {
+      const response = await request("/health?_vercel_share=test");
+      expect(response.status).toBe(200);
+      expect(JSON.parse(response.body)).toEqual({ status: "ok" });
+    } finally {
+      process.env.AGENT_REPORTING_KEY = previous;
+    }
+  });
+
   it("publishes OAuth protected-resource metadata", async () => {
     const response = await request("/.well-known/oauth-protected-resource");
     expect(response.status).toBe(200);
