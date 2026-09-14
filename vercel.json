@@ -7,7 +7,7 @@
   "outputDirectory": null,
   "functions": {
     "server.ts": {
-      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**}"
+      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**,mcp-server/dist/**}"
     }
   }
 }

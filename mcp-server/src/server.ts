@@ -50,7 +50,7 @@ function requestPath(url: string | undefined): string {
   }
 }
 
-const httpServer = createHttpServer(async (request: IncomingMessage, response: ServerResponse) => {
+export async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
   try {
     if (request.method === "OPTIONS") {
       response.writeHead(204, corsHeaders());
@@ -88,14 +88,11 @@ const httpServer = createHttpServer(async (request: IncomingMessage, response: S
     if (!response.headersSent) sendJson(response, 500, { error: message });
     else response.end();
   }
-});
-
-if (process.env.NODE_ENV !== "test" && process.env.VERCEL !== "1") {
-  const port = Number(process.env.PORT ?? 8000);
-  httpServer.listen(port, "0.0.0.0", () => {
-    console.log(JSON.stringify({ event: "mcp_server_started", port, endpoint: "/mcp" }));
-  });
 }
+
+const httpServer = createHttpServer((request, response) => {
+  void handleRequest(request, response);
+});
 
 async function authenticate(
   request: IncomingMessage,

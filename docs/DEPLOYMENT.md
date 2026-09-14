@@ -4,7 +4,17 @@
 
 This repository is a **Node.js HTTP MCP server**, not a static site. Vercel must use the Node server builder (Fluid Compute). Do **not** set an Output Directory such as `public` — that is what failed production deploy `dpl_EtKApwRKnSzx8Doh2vSjuT1JdDTj` (`STATIC_BUILD_NO_OUT_DIR`).
 
-Vercel detects `server.ts` at the repository root (preferred) or `src/server.ts` (this repo keeps `src` as a symlink to `mcp-server/src`). The entry default-exports the Node `http.Server` and calls `listen()`. Fluid Compute serves:
+Vercel’s Node.js backend captures `createServer()` + `listen()` **in the root `server.ts` file** (see [Node.js runtime](https://vercel.com/docs/functions/runtimes/node-js)). Production `dpl_BuCsDLnfK4BV8jkZfajKzE8yCh3s` built successfully after PR #3 but `GET /health` still 500’d with runtime source `static`: the entry imported a Server created in `mcp-server/src` (TypeScript) and Vercel did not attach that listener to requests.
+
+The root entry now:
+
+1. Calls `createServer()` and `listen(PORT)` in `server.ts` (the documented pattern).
+2. Answers `GET /health` from pathname **before** loading MCP config (`{"status":"ok"}`).
+3. Imports the compiled handler from `mcp-server/dist/server.js` (emitted by `npx tsc` during the Vercel build).
+
+Do **not** add a `src/server.ts` symlink — Vercel also looks at `src/server` as an entrypoint and that competed with the root file.
+
+Fluid Compute serves:
 
 - `GET /health`
 - Streamable HTTP `POST` / `GET` / `DELETE` `/mcp`
@@ -24,7 +34,7 @@ Committed at the repository root (this is the source of truth; it overrides dash
   "outputDirectory": null,
   "functions": {
     "server.ts": {
-      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**}"
+      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**,mcp-server/dist/**}"
     }
   }
 }

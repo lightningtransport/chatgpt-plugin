@@ -3,7 +3,7 @@
 ## 0.2.2
 
 - Fix Vercel production rebuilds when `NODE_ENV=production` is set: install TypeScript (`--include=dev`), keep `typescript` as a dependency, and invoke `npx tsc` so `npm run build` finds the local compiler.
-- Keep the Node.js entry (`framework: "node"`, root `server.ts` listen + default export) and serve `/health` without requiring full runtime config, including when the URL has a query string.
+- Create the Node HTTP server in root `server.ts` (`createServer` + `listen`) and import the compiled `mcp-server/dist` handler so Vercel does not serve a static 500. `/health` answers from pathname without loading config.
 
 ## 0.2.1
 
