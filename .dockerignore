@@ -1,0 +1,10 @@
+.git
+.vercel
+node_modules
+mcp-server/node_modules
+mcp-server/dist
+dist
+.env
+.env.*
+!.env.example
+*.pem
