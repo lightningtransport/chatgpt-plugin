@@ -16,7 +16,7 @@ Use Auth0 as the OAuth 2.1 / OIDC provider. The Lightning tenant and MCP server 
 - `OAUTH_AUDIENCE=https://lightning-reporting.vercel.app/mcp` (must match the Auth0 API identifier and the published protected-resource `resource` value, including `/mcp`)
 - `OAUTH_JWKS_URL=https://dev-50ed1gzziwaws2zo.us.auth0.com/.well-known/jwks.json`
 - `OAUTH_SCOPE=reporting:read`
-- a token containing `sub`, matching issuer/audience, expiry, and the `reporting:read` scope
+- a token containing `sub`, matching issuer/audience, expiry, and `reporting:read` in any of `scope` (space-delimited), `scp` (array), or Auth0 RBAC `permissions` (array)
 
 The server publishes `/.well-known/oauth-protected-resource` (and the RFC 9728 path-aware `/.well-known/oauth-protected-resource/mcp`). The JSON `resource` value is the canonical MCP URL from `OAUTH_AUDIENCE` (`https://lightning-reporting.vercel.app/mcp`), not the bare host. `authorization_servers` is `OAUTH_ISSUER`. Unauthenticated `/mcp` responses include a `WWW-Authenticate` challenge whose `resource_metadata` URL is derived from that same audience (`https://lightning-reporting.vercel.app/.well-known/oauth-protected-resource/mcp`).
 
@@ -25,7 +25,7 @@ ChatGPT may also probe `/.well-known/openid-configuration` and `/.well-known/oau
 ### Auth0 application and API
 
 1. Create an Auth0 API whose identifier equals `OAUTH_AUDIENCE` (`https://lightning-reporting.vercel.app/mcp`). Do not use the bare host.
-2. Add the permission / scope `reporting:read` and include it in issued access tokens.
+2. Add the permission / scope `reporting:read` and include it in issued access tokens. Auth0 APIs with RBAC and "Add Permissions in the Access Token" may emit `permissions: ["reporting:read"]` instead of a `scope` string; RFC 9068 `scp` arrays are also accepted.
 3. Create an application that supports Authorization Code + PKCE.
 4. Add the ChatGPT plugin redirect URI to Allowed Callback URLs.
 5. Set Allowed Web Origins / CORS to the ChatGPT origins shown in the connection UI.

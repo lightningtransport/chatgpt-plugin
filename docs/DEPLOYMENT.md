@@ -111,7 +111,7 @@ The container must not contain `.env`, secrets, or a database credential. Config
 - Vercel `tsc: command not found` / `npm run build` exit 127: `NODE_ENV=production` skipped `devDependencies`. Confirm `vercel.json` uses `npm ci --prefix mcp-server --include=dev`, `typescript` is a dependency, and the build script is `npx tsc`.
 - Vercel `No Output Directory named "public"`: the project is still on the Other/static builder. Confirm `vercel.json` has `"framework": "node"`, `"outputDirectory": null`, and the dashboard Output Directory is not set to `public`.
 - `500` on `/mcp` at startup in production: OAuth variables are missing or development auth is still selected. `/health` should still return `{"status":"ok"}`.
-- `401`: inspect protected-resource metadata, issuer/audience, JWKS, scopes, and the Auth0 redirect allowlist.
+- `401`: inspect protected-resource metadata, issuer/audience, JWKS, `scope`/`scp`/`permissions` for `reporting:read`, and the Auth0 redirect allowlist. Distinguish missing bearer, invalid JWT, and missing scope from the `WWW-Authenticate` `error_description`.
 - `503`/`504`: inspect host egress, upstream gateway availability, and timeout settings.
 - Missing or stale tools: restart/refresh the ChatGPT MCP connection after metadata changes.
 - ChatGPT cannot connect: confirm Vercel Deployment Protection is off and `/.well-known/oauth-protected-resource` is publicly reachable. The JSON `resource` must be `https://lightning-reporting.vercel.app/mcp` (same as Auth0 API identifier / `OAUTH_AUDIENCE`), not the bare host.
