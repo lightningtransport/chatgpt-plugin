@@ -11,4 +11,4 @@ npm test
 AGENT_REPORTING_KEY=... npm run dev
 ```
 
-The service exposes Streamable HTTP at `/mcp`, `GET /health`, and `GET /.well-known/oauth-protected-resource` on `PORT` (default `8000`).
+The service exposes Streamable HTTP at `/mcp`, `GET /health`, and `GET /.well-known/oauth-protected-resource` (JSON `resource` = `OAUTH_AUDIENCE`) on `PORT` (default `8000`). Authorization-server discovery on this host redirects to Auth0.

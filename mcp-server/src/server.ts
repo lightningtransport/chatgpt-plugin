@@ -48,22 +48,28 @@ const httpServer = createHttpServer(async (request: IncomingMessage, response: S
       response.end();
       return;
     }
-    if (request.url === "/health" && request.method === "GET") {
+    const pathname = requestPathname(request);
+    if (pathname === "/health" && request.method === "GET") {
       return sendJson(response, 200, { status: "ok" });
     }
     const { config, documents, client, jwks } = await getRuntime();
-    if (request.url === "/.well-known/oauth-protected-resource" && request.method === "GET") {
+    if (isProtectedResourceMetadataPath(pathname) && request.method === "GET") {
       if (config.MCP_AUTH_MODE !== "oauth") return sendJson(response, 404, { error: "OAuth is not enabled." });
-      return sendJson(response, 200, {
-        resource: `https://${request.headers.host ?? "localhost"}`,
-        authorization_servers: [config.OAUTH_ISSUER],
-        scopes_supported: [config.OAUTH_SCOPE],
-      });
+      if (!config.OAUTH_AUDIENCE || !config.OAUTH_ISSUER) {
+        return sendJson(response, 500, { error: "OAuth protected-resource metadata is not configured." });
+      }
+      return sendJson(response, 200, protectedResourceMetadata(config));
     }
-    if (!request.url?.startsWith("/mcp")) return sendJson(response, 404, { error: "Not found." });
+    if (isAuthorizationServerDiscoveryPath(pathname) && request.method === "GET") {
+      if (config.MCP_AUTH_MODE !== "oauth" || !config.OAUTH_ISSUER) {
+        return sendJson(response, 404, { error: "OAuth is not enabled." });
+      }
+      return sendRedirect(response, authorizationServerDiscoveryUrl(config.OAUTH_ISSUER, pathname));
+    }
+    if (!pathname.startsWith("/mcp")) return sendJson(response, 404, { error: "Not found." });
     if (!rateLimit(config)) return sendJson(response, 429, { error: "Too many requests." });
     const auth = await authenticate(request, config, jwks);
-    if (!auth.ok) return sendAuthChallenge(response, auth.message ?? "Authentication required.");
+    if (!auth.ok) return sendAuthChallenge(response, config, auth.message ?? "Authentication required.");
 
     const body = await readBody(request);
     const transport = new StreamableHTTPServerTransport({
@@ -139,16 +145,75 @@ function readBody(request: IncomingMessage): Promise<string> {
   });
 }
 
+function requestPathname(request: IncomingMessage): string {
+  try {
+    const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+    return pathname.replace(/\/+$/, "") || "/";
+  } catch {
+    return request.url ?? "/";
+  }
+}
+
+function isProtectedResourceMetadataPath(pathname: string): boolean {
+  return (
+    pathname === "/.well-known/oauth-protected-resource" ||
+    pathname === "/.well-known/oauth-protected-resource/mcp" ||
+    pathname === "/mcp/.well-known/oauth-protected-resource"
+  );
+}
+
+function isAuthorizationServerDiscoveryPath(pathname: string): boolean {
+  return pathname === "/.well-known/openid-configuration" || pathname === "/.well-known/oauth-authorization-server";
+}
+
+function canonicalMcpResource(config: Config): string {
+  if (!config.OAUTH_AUDIENCE) {
+    throw new Error("OAUTH_AUDIENCE is required to identify the MCP resource.");
+  }
+  return config.OAUTH_AUDIENCE;
+}
+
+function protectedResourceMetadata(config: Config) {
+  if (!config.OAUTH_ISSUER) {
+    throw new Error("OAUTH_ISSUER is required to publish protected-resource metadata.");
+  }
+  return {
+    resource: canonicalMcpResource(config),
+    authorization_servers: [config.OAUTH_ISSUER],
+    scopes_supported: [config.OAUTH_SCOPE],
+  };
+}
+
+function resourceMetadataUrl(config: Config): string {
+  const resource = new URL(canonicalMcpResource(config));
+  const resourcePath = resource.pathname.replace(/\/+$/, "");
+  const suffix = !resourcePath || resourcePath === "/" ? "" : resourcePath;
+  return `${resource.origin}/.well-known/oauth-protected-resource${suffix}`;
+}
+
+function authorizationServerDiscoveryUrl(issuer: string, pathname: string): string {
+  const base = issuer.endsWith("/") ? issuer : `${issuer}/`;
+  return new URL(pathname.replace(/^\//, ""), base).href;
+}
+
 function sendJson(response: ServerResponse, status: number, body: unknown) {
   response.writeHead(status, { ...corsHeaders(), "content-type": "application/json", "cache-control": "no-store" });
   response.end(JSON.stringify(body));
 }
 
-function sendAuthChallenge(response: ServerResponse, message: string) {
+function sendRedirect(response: ServerResponse, location: string) {
+  response.writeHead(302, { ...corsHeaders(), location, "cache-control": "no-store" });
+  response.end();
+}
+
+function sendAuthChallenge(response: ServerResponse, config: Config, message: string) {
+  const metadataUrl = config.OAUTH_AUDIENCE
+    ? resourceMetadataUrl(config)
+    : "/.well-known/oauth-protected-resource";
   response.writeHead(401, {
     ...corsHeaders(),
     "content-type": "application/json",
-    "www-authenticate": `Bearer resource_metadata="/.well-known/oauth-protected-resource", error="unauthorized", error_description="${message}"`,
+    "www-authenticate": `Bearer resource_metadata="${metadataUrl}", error="unauthorized", error_description="${message}"`,
   });
   response.end(JSON.stringify({ error: message }));
 }

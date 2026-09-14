@@ -5,7 +5,7 @@ This uses the current OpenAI Plugins/MCP flow, not the retired `ai-plugin.json` 
 ## Before connecting
 
 1. Deploy the server to Vercel at a stable HTTPS URL ending in `/mcp`. See [`DEPLOYMENT.md`](DEPLOYMENT.md).
-2. Configure Auth0 OAuth 2.1 and verify that `/.well-known/oauth-protected-resource` is reachable.
+2. Configure Auth0 OAuth 2.1 and verify that `/.well-known/oauth-protected-resource` is reachable and that its `resource` value is `https://lightning-reporting.vercel.app/mcp` (matching `OAUTH_AUDIENCE` and the Auth0 API identifier).
 3. Store `AGENT_REPORTING_KEY` only in the Vercel project environment (sensitive). Never commit it.
 4. Confirm `/health` and inspect the endpoint with MCP Inspector.
 

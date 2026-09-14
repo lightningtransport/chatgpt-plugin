@@ -8,7 +8,9 @@ Vercel detects `server.ts` at the repository root (preferred) or `src/server.ts`
 
 - `GET /health`
 - Streamable HTTP `POST` / `GET` / `DELETE` `/mcp`
-- `GET /.well-known/oauth-protected-resource`
+- `GET /.well-known/oauth-protected-resource` (JSON `resource` must equal `OAUTH_AUDIENCE`, including `/mcp`)
+- `GET /.well-known/oauth-protected-resource/mcp` (RFC 9728 path-aware alias)
+- `GET /.well-known/openid-configuration` and `GET /.well-known/oauth-authorization-server` (302 to Auth0)
 
 ### Exact `vercel.json`
 
@@ -68,7 +70,7 @@ Set these in the Vercel project (Production and Preview as appropriate). Mark se
 | `NODE_ENV` | yes in production | `production` |
 | `MCP_AUTH_MODE` | yes in production | `oauth` |
 | `OAUTH_ISSUER` | yes in production | `https://dev-50ed1gzziwaws2zo.us.auth0.com/` (trailing slash) |
-| `OAUTH_AUDIENCE` | yes in production | Placeholder `https://lightning-reporting.vercel.app/mcp` until the real Vercel URL exists |
+| `OAUTH_AUDIENCE` | yes in production | Canonical MCP resource `https://lightning-reporting.vercel.app/mcp`. Must match the Auth0 API identifier. Protected-resource metadata publishes this exact `resource` value. |
 | `OAUTH_JWKS_URL` | yes in production | `https://dev-50ed1gzziwaws2zo.us.auth0.com/.well-known/jwks.json` |
 | `OAUTH_SCOPE` | no | `reporting:read` |
 | `REPORTING_KNOWLEDGE_ROOT` | no | Defaults to the deployment working directory (repository root) |
@@ -102,4 +104,5 @@ The container must not contain `.env`, secrets, or a database credential. Config
 - `401`: inspect protected-resource metadata, issuer/audience, JWKS, scopes, and the Auth0 redirect allowlist.
 - `503`/`504`: inspect host egress, upstream gateway availability, and timeout settings.
 - Missing or stale tools: restart/refresh the ChatGPT MCP connection after metadata changes.
-- ChatGPT cannot connect: confirm Vercel Deployment Protection is off and `/.well-known/oauth-protected-resource` is publicly reachable.
+- ChatGPT cannot connect: confirm Vercel Deployment Protection is off and `/.well-known/oauth-protected-resource` is publicly reachable. The JSON `resource` must be `https://lightning-reporting.vercel.app/mcp` (same as Auth0 API identifier / `OAUTH_AUDIENCE`), not the bare host.
+- ChatGPT probes `/.well-known/openid-configuration` or `/.well-known/oauth-authorization-server` on the MCP host: those should 302 to Auth0 (`OAUTH_ISSUER`). Do not treat a 404 there as a missing Auth0 tenant.
