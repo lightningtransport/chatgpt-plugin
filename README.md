@@ -30,7 +30,7 @@ Set `AGENT_REPORTING_KEY` through your shell or deployment-secret manager before
 
 ## Deployment and ChatGPT connection
 
-1. Deploy this repository to Vercel (recommended) or build `Dockerfile` from the repository root.
+1. Deploy this repository to Vercel as a **Node.js server** (recommended; see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — do not use a static `public` output directory) or build `Dockerfile` from the repository root.
 2. Set `AGENT_REPORTING_KEY` as a host-managed secret. Set `AGENT_REPORTING_ENDPOINT` only if the Edge Function endpoint changes.
 3. Configure Auth0 OAuth 2.1 + PKCE. See [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 4. In ChatGPT, enable Developer mode, open ChatGPT Plugins, add the hosted `/mcp` connection, and test it with an authorized account. See [`docs/CHATGPT_PLUGIN_SETUP.md`](docs/CHATGPT_PLUGIN_SETUP.md).

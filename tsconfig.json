@@ -3,14 +3,13 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "outDir": "dist",
-    "rootDir": "src",
     "strict": true,
     "types": ["node"],
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["server.ts", "src/**/*.ts", "mcp-server/src/**/*.ts"],
   "exclude": ["mcp-server/tests", "mcp-server/dist"]
 }

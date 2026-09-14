@@ -2,19 +2,54 @@
 
 ## Recommended host: Vercel
 
-The TypeScript MCP server is a Node.js HTTP server. Vercel detects `src/server.ts` (this repository keeps that path as a link to `mcp-server/src/server.ts`) and captures `listen()`. Fluid Compute / the Node.js runtime serves:
+This repository is a **Node.js HTTP MCP server**, not a static site. Vercel must use the Node server builder (Fluid Compute). Do **not** set an Output Directory such as `public` — that is what failed production deploy `dpl_EtKApwRKnSzx8Doh2vSjuT1JdDTj` (`STATIC_BUILD_NO_OUT_DIR`).
+
+Vercel detects `server.ts` at the repository root (preferred) or `src/server.ts` (this repo keeps `src` as a symlink to `mcp-server/src`). The entry default-exports the Node `http.Server` and calls `listen()`. Fluid Compute serves:
 
 - `GET /health`
 - Streamable HTTP `POST` / `GET` / `DELETE` `/mcp`
 - `GET /.well-known/oauth-protected-resource`
 
-Create a Vercel project from `lightningtransport/chatgpt-plugin`:
+### Exact `vercel.json`
 
-1. Framework preset: Other (Node.js server). Root Directory: repository root.
-2. Install command: `npm ci --prefix mcp-server`
-3. Build command: `npm run build --prefix mcp-server`
-4. Deploy. Confirm `https://YOUR_DEPLOYMENT.vercel.app/health` returns `{"status":"ok"}`.
-5. The ChatGPT MCP URL is `https://YOUR_DEPLOYMENT.vercel.app/mcp`.
+Committed at the repository root (this is the source of truth; it overrides dashboard Build/Output leftovers from the failed Other/static preset):
+
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "node",
+  "fluid": true,
+  "installCommand": "npm ci --prefix mcp-server",
+  "buildCommand": null,
+  "outputDirectory": null,
+  "functions": {
+    "server.ts": {
+      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**}"
+    }
+  }
+}
+```
+
+`buildCommand: null` and `outputDirectory: null` mean **auto-detect for the Node server**, not “run `tsc` and publish `public/`”. Vercel bundles `server.ts`; do not add a separate static output folder. The `npm run build` / `tsc` script stays for Docker and local compile only.
+
+`includeFiles` ships reporting knowledge documents into the function bundle (`loadDocuments` reads them from `REPORTING_KNOWLEDGE_ROOT`, defaulting to the process working directory when `AGENTS.md` is present).
+
+### Project settings (Vercel dashboard)
+
+Create or update the project from `lightningtransport/chatgpt-plugin` with:
+
+| Setting | Value |
+| --- | --- |
+| Framework Preset | **Node.js** (`node`). Not Other + static output. |
+| Root Directory | Repository root (do not set `mcp-server`; knowledge files live at the root) |
+| Install Command | `npm ci --prefix mcp-server` (from `vercel.json`) |
+| Build Command | Auto-detect / empty. **Do not** set `npm run build --prefix mcp-server` |
+| Output Directory | Empty / unused. **Do not** set `public` |
+| Node.js Version | 22.x or 24.x (`engines.node` is `>=22`) |
+| Fluid Compute | On (`fluid: true`) |
+
+1. Deploy. Confirm `https://YOUR_DEPLOYMENT.vercel.app/health` returns `{"status":"ok"}`.
+2. The ChatGPT MCP URL is `https://YOUR_DEPLOYMENT.vercel.app/mcp`.
 
 Disable Vercel Deployment Protection / Vercel Authentication for this project so ChatGPT can reach `/mcp` and the OAuth metadata URL. Access control is Auth0, not Vercel SSO.
 
@@ -57,6 +92,7 @@ The container must not contain `.env`, secrets, or a database credential. Config
 
 ## Troubleshooting
 
+- Vercel `No Output Directory named "public"`: the project is still on the Other/static builder. Confirm `vercel.json` has `"framework": "node"`, `"buildCommand": null`, `"outputDirectory": null`, and the dashboard Build Command / Output Directory are not still set to `tsc` / `public`.
 - `500` at startup in production: OAuth variables are missing or development auth is still selected.
 - `401`: inspect protected-resource metadata, issuer/audience, JWKS, scopes, and the Auth0 redirect allowlist.
 - `503`/`504`: inspect host egress, upstream gateway availability, and timeout settings.

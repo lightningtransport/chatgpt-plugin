@@ -1,6 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
+  "framework": "node",
+  "fluid": true,
   "installCommand": "npm ci --prefix mcp-server",
-  "buildCommand": "npm run build --prefix mcp-server"
+  "buildCommand": null,
+  "outputDirectory": null,
+  "functions": {
+    "server.ts": {
+      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**}"
+    }
+  }
 }
