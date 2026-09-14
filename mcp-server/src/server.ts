@@ -64,7 +64,7 @@ const httpServer = createHttpServer(async (request: IncomingMessage, response: S
   }
 });
 
-if (process.env.NODE_ENV !== "test") {
+if (process.env.NODE_ENV !== "test" && process.env.VERCEL !== "1") {
   httpServer.listen(config.PORT, "0.0.0.0", () => {
     console.log(JSON.stringify({ event: "mcp_server_started", port: config.PORT, endpoint: "/mcp", authMode: config.MCP_AUTH_MODE }));
   });
@@ -141,4 +141,5 @@ function corsHeaders(): Record<string, string> {
   };
 }
 
+export default httpServer;
 export { httpServer };
