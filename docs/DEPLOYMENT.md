@@ -9,8 +9,8 @@ Vercel’s Node.js backend captures `createServer()` + `listen()` **in the root 
 The root entry now:
 
 1. Calls `createServer()` and `listen(PORT)` in `server.ts` (the documented pattern).
-2. Answers `GET /health` from pathname **before** loading MCP config (`{"status":"ok"}`).
-3. Imports the compiled handler from `mcp-server/dist/server.js` (emitted by `npx tsc` during the Vercel build).
+2. Answers `GET /health` from pathname with **no MCP imports** at module load (`{"status":"ok"}` even if `dist` fails to boot).
+3. Dynamically imports the compiled handler from `mcp-server/dist/server.js` for `/mcp` and OAuth metadata.
 
 Do **not** add a `src/server.ts` symlink — Vercel also looks at `src/server` as an entrypoint and that competed with the root file.
 
