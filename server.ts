@@ -1,9 +1,20 @@
-import { httpServer } from "./mcp-server/src/server.js";
+import { createServer } from "node:http";
+import { handleRequest } from "./mcp-server/dist/server.js";
 
-// Preferred Vercel entrypoint. Vercel captures this listen() call (the port is
-// local-only; Vercel routes into the server). mcp-server skips listen() when
-// VERCEL=1 so this file is the single bind on the platform.
-httpServer.listen(Number(process.env.PORT ?? 8000));
+// Vercel Node.js backend captures createServer() + listen() in this file
+// (https://vercel.com/docs/functions/runtimes/node-js). Importing a Server
+// created in another module left production serving a static 500 page.
+const server = createServer((request, response) => {
+  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+  if (request.method === "GET" && url.pathname === "/health") {
+    response.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+    response.end(JSON.stringify({ status: "ok" }));
+    return;
+  }
+  void handleRequest(request, response);
+});
 
-export default httpServer;
-export { httpServer };
+server.listen(Number(process.env.PORT ?? 8000));
+
+export default server;
+export { server as httpServer };

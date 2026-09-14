@@ -10,6 +10,6 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true
   },
-  "include": ["server.ts", "src/**/*.ts", "mcp-server/src/**/*.ts"],
-  "exclude": ["mcp-server/tests", "mcp-server/dist"]
+  "include": ["server.ts", "mcp-server/src/**/*.ts"],
+  "exclude": ["mcp-server/tests"]
 }

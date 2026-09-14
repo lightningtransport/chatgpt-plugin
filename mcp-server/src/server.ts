@@ -41,18 +41,28 @@ export function createMcpServer(client: ReportingClient, documents: Map<string, 
   return server;
 }
 
-const httpServer = createHttpServer(async (request: IncomingMessage, response: ServerResponse) => {
+function requestPath(url: string | undefined): string {
+  if (!url) return "";
+  try {
+    return new URL(url, "http://localhost").pathname;
+  } catch {
+    return url.split("?")[0] ?? "";
+  }
+}
+
+export async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
   try {
     if (request.method === "OPTIONS") {
       response.writeHead(204, corsHeaders());
       response.end();
       return;
     }
-    if (request.url === "/health" && request.method === "GET") {
+    const path = requestPath(request.url);
+    if (path === "/health" && request.method === "GET") {
       return sendJson(response, 200, { status: "ok" });
     }
     const { config, documents, client, jwks } = await getRuntime();
-    if (request.url === "/.well-known/oauth-protected-resource" && request.method === "GET") {
+    if (path === "/.well-known/oauth-protected-resource" && request.method === "GET") {
       if (config.MCP_AUTH_MODE !== "oauth") return sendJson(response, 404, { error: "OAuth is not enabled." });
       return sendJson(response, 200, {
         resource: `https://${request.headers.host ?? "localhost"}`,
@@ -60,7 +70,7 @@ const httpServer = createHttpServer(async (request: IncomingMessage, response: S
         scopes_supported: [config.OAUTH_SCOPE],
       });
     }
-    if (!request.url?.startsWith("/mcp")) return sendJson(response, 404, { error: "Not found." });
+    if (!path.startsWith("/mcp")) return sendJson(response, 404, { error: "Not found." });
     if (!rateLimit(config)) return sendJson(response, 429, { error: "Too many requests." });
     const auth = await authenticate(request, config, jwks);
     if (!auth.ok) return sendAuthChallenge(response, auth.message ?? "Authentication required.");
@@ -78,14 +88,11 @@ const httpServer = createHttpServer(async (request: IncomingMessage, response: S
     if (!response.headersSent) sendJson(response, 500, { error: message });
     else response.end();
   }
-});
-
-if (process.env.NODE_ENV !== "test" && process.env.VERCEL !== "1") {
-  const config = loadConfig();
-  httpServer.listen(config.PORT, "0.0.0.0", () => {
-    console.log(JSON.stringify({ event: "mcp_server_started", port: config.PORT, endpoint: "/mcp", authMode: config.MCP_AUTH_MODE }));
-  });
 }
+
+const httpServer = createHttpServer((request, response) => {
+  void handleRequest(request, response);
+});
 
 async function authenticate(
   request: IncomingMessage,
