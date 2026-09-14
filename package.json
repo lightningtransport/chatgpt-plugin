@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "npm run build --prefix mcp-server",
+    "compile": "npm run build --prefix mcp-server",
     "dev": "npm run dev --prefix mcp-server",
     "start": "npm start --prefix mcp-server",
     "lint": "npm run lint --prefix mcp-server",

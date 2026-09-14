@@ -13,4 +13,4 @@ RUN npm run build && npm prune --omit=dev
 
 USER node
 EXPOSE 8000
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/start.js"]

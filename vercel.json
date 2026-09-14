@@ -3,11 +3,11 @@
   "framework": "node",
   "fluid": true,
   "installCommand": "npm ci --prefix mcp-server --include=dev",
-  "buildCommand": "npm run build",
+  "buildCommand": null,
   "outputDirectory": null,
   "functions": {
     "server.ts": {
-      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**}"
+      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**,mcp-server/src/**}"
     }
   }
 }

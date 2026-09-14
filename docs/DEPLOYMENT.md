@@ -4,7 +4,17 @@
 
 This repository is a **Node.js HTTP MCP server**, not a static site. Vercel must use the Node server builder (Fluid Compute). Do **not** set an Output Directory such as `public` — that is what failed production deploy `dpl_EtKApwRKnSzx8Doh2vSjuT1JdDTj` (`STATIC_BUILD_NO_OUT_DIR`).
 
-Vercel detects `server.ts` at the repository root (preferred) or `src/server.ts` (this repo keeps `src` as a symlink to `mcp-server/src`). The entry default-exports the Node `http.Server` and calls `listen()`. Fluid Compute serves:
+Vercel’s Node.js backend captures `createServer()` + `listen()` **in the root `server.ts` file** (see [Node.js runtime](https://vercel.com/docs/functions/runtimes/node-js)). Production `dpl_BuCsDLnfK4BV8jkZfajKzE8yCh3s` built successfully after PR #3 but `GET /health` still 500’d with runtime source `static`: the entry imported a Server created in `mcp-server/src` (TypeScript) and Vercel did not attach that listener to requests.
+
+The root entry now:
+
+1. Calls `createServer()` and `listen(PORT)` in `server.ts` (the documented Node.js pattern). **Do not** also `export default` the server — that dual binding hung production workers.
+2. Answers `GET /health` from pathname with **no MCP imports** at module load.
+3. Dynamically imports `mcp-server/src/server.ts` for `/mcp` and OAuth metadata. Vercel compiles that TypeScript; do **not** set a root `build` script (it makes Vercel run `tsc` and has broken the Node server).
+
+Do **not** add a `src/server.ts` symlink — Vercel also looks at `src/server` as an entrypoint and that competed with the root file.
+
+Fluid Compute serves:
 
 - `GET /health`
 - Streamable HTTP `POST` / `GET` / `DELETE` `/mcp`
@@ -22,11 +32,11 @@ Committed at the repository root (this is the source of truth; it overrides dash
   "framework": "node",
   "fluid": true,
   "installCommand": "npm ci --prefix mcp-server --include=dev",
-  "buildCommand": "npm run build",
+  "buildCommand": null,
   "outputDirectory": null,
   "functions": {
     "server.ts": {
-      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**}"
+      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**,mcp-server/src/**}"
     }
   }
 }
@@ -49,7 +59,7 @@ Create or update the project from `lightningtransport/chatgpt-plugin` with:
 | Framework Preset | **Node.js** (`node`). Not Other + static output. |
 | Root Directory | Repository root (do not set `mcp-server`; knowledge files live at the root) |
 | Install Command | `npm ci --prefix mcp-server --include=dev` (from `vercel.json`) |
-| Build Command | `npm run build` (uses `npx tsc` in `mcp-server`) |
+| Build Command | Auto-detect / empty. Do **not** set `npm run build` (Vercel compiles `server.ts`) |
 | Output Directory | Empty / unused. **Do not** set `public` |
 | Node.js Version | 22.x or 24.x (`engines.node` is `>=22`) |
 | Fluid Compute | On (`fluid: true`) |

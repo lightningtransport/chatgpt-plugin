@@ -41,32 +41,41 @@ export function createMcpServer(client: ReportingClient, documents: Map<string, 
   return server;
 }
 
-const httpServer = createHttpServer(async (request: IncomingMessage, response: ServerResponse) => {
+function requestPath(url: string | undefined): string {
+  if (!url) return "";
+  try {
+    return new URL(url, "http://localhost").pathname;
+  } catch {
+    return url.split("?")[0] ?? "";
+  }
+}
+
+export async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
   try {
     if (request.method === "OPTIONS") {
       response.writeHead(204, corsHeaders());
       response.end();
       return;
     }
-    const pathname = requestPathname(request);
-    if (pathname === "/health" && request.method === "GET") {
+    const path = requestPath(request.url).replace(/\/+$/, "") || "/";
+    if (path === "/health" && request.method === "GET") {
       return sendJson(response, 200, { status: "ok" });
     }
     const { config, documents, client, jwks } = await getRuntime();
-    if (isProtectedResourceMetadataPath(pathname) && request.method === "GET") {
+    if (isProtectedResourceMetadataPath(path) && request.method === "GET") {
       if (config.MCP_AUTH_MODE !== "oauth") return sendJson(response, 404, { error: "OAuth is not enabled." });
       if (!config.OAUTH_AUDIENCE || !config.OAUTH_ISSUER) {
         return sendJson(response, 500, { error: "OAuth protected-resource metadata is not configured." });
       }
       return sendJson(response, 200, protectedResourceMetadata(config));
     }
-    if (isAuthorizationServerDiscoveryPath(pathname) && request.method === "GET") {
+    if (isAuthorizationServerDiscoveryPath(path) && request.method === "GET") {
       if (config.MCP_AUTH_MODE !== "oauth" || !config.OAUTH_ISSUER) {
         return sendJson(response, 404, { error: "OAuth is not enabled." });
       }
-      return sendRedirect(response, authorizationServerDiscoveryUrl(config.OAUTH_ISSUER, pathname));
+      return sendRedirect(response, authorizationServerDiscoveryUrl(config.OAUTH_ISSUER, path));
     }
-    if (!pathname.startsWith("/mcp")) return sendJson(response, 404, { error: "Not found." });
+    if (!path.startsWith("/mcp")) return sendJson(response, 404, { error: "Not found." });
     if (!rateLimit(config)) return sendJson(response, 429, { error: "Too many requests." });
     const auth = await authenticate(request, config, jwks);
     if (!auth.ok) return sendAuthChallenge(response, config, auth.message ?? "Authentication required.");
@@ -84,14 +93,11 @@ const httpServer = createHttpServer(async (request: IncomingMessage, response: S
     if (!response.headersSent) sendJson(response, 500, { error: message });
     else response.end();
   }
-});
-
-if (process.env.NODE_ENV !== "test" && process.env.VERCEL !== "1") {
-  const config = loadConfig();
-  httpServer.listen(config.PORT, "0.0.0.0", () => {
-    console.log(JSON.stringify({ event: "mcp_server_started", port: config.PORT, endpoint: "/mcp", authMode: config.MCP_AUTH_MODE }));
-  });
 }
+
+const httpServer = createHttpServer((request, response) => {
+  void handleRequest(request, response);
+});
 
 async function authenticate(
   request: IncomingMessage,
@@ -143,15 +149,6 @@ function readBody(request: IncomingMessage): Promise<string> {
     request.on("end", () => resolve(body));
     request.on("error", reject);
   });
-}
-
-function requestPathname(request: IncomingMessage): string {
-  try {
-    const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
-    return pathname.replace(/\/+$/, "") || "/";
-  } catch {
-    return request.url ?? "/";
-  }
 }
 
 function isProtectedResourceMetadataPath(pathname: string): boolean {
