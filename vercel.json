@@ -2,8 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "node",
   "fluid": true,
-  "installCommand": "npm ci --prefix mcp-server",
-  "buildCommand": null,
+  "installCommand": "npm ci --prefix mcp-server --include=dev",
+  "buildCommand": "npm run build",
   "outputDirectory": null,
   "functions": {
     "server.ts": {

@@ -49,6 +49,18 @@ describe("HTTP endpoints", () => {
     expect(JSON.parse(response.body)).toEqual({ status: "ok" });
   });
 
+  it("serves /health without reporting env", async () => {
+    const previous = process.env.AGENT_REPORTING_KEY;
+    delete process.env.AGENT_REPORTING_KEY;
+    try {
+      const response = await request("/health");
+      expect(response.status).toBe(200);
+      expect(JSON.parse(response.body)).toEqual({ status: "ok" });
+    } finally {
+      process.env.AGENT_REPORTING_KEY = previous;
+    }
+  });
+
   it("publishes OAuth protected-resource metadata", async () => {
     const response = await request("/.well-known/oauth-protected-resource");
     expect(response.status).toBe(200);

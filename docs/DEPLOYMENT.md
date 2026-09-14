@@ -19,8 +19,8 @@ Committed at the repository root (this is the source of truth; it overrides dash
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "node",
   "fluid": true,
-  "installCommand": "npm ci --prefix mcp-server",
-  "buildCommand": null,
+  "installCommand": "npm ci --prefix mcp-server --include=dev",
+  "buildCommand": "npm run build",
   "outputDirectory": null,
   "functions": {
     "server.ts": {
@@ -30,9 +30,13 @@ Committed at the repository root (this is the source of truth; it overrides dash
 }
 ```
 
-`buildCommand: null` and `outputDirectory: null` mean **auto-detect for the Node server**, not “run `tsc` and publish `public/`”. Vercel bundles `server.ts`; do not add a separate static output folder. The `npm run build` / `tsc` script stays for Docker and local compile only.
+`framework: "node"` plus root `server.ts` (default export + `listen()`) is the Node server entry. `outputDirectory: null` means do **not** publish a static `public/` folder.
+
+Vercel still runs `npm run build` (the root script delegates to `mcp-server`). That compile uses `npx tsc`, so the TypeScript binary comes from `mcp-server/node_modules`. `--include=dev` is required because setting `NODE_ENV=production` in the project would otherwise omit `devDependencies` and fail with `tsc: command not found` (exit 127), which is what happened on production redeploy `dpl_HJ8Ad1DTz2LMX5NQKofU3r9ASvzs` after env vars were added. `typescript` and `@types/node` are also listed as `dependencies` so a production `npm ci` still installs the compiler.
 
 `includeFiles` ships reporting knowledge documents into the function bundle (`loadDocuments` reads them from `REPORTING_KNOWLEDGE_ROOT`, defaulting to the process working directory when `AGENTS.md` is present).
+
+`GET /health` does not load reporting/OAuth config, so it can return `{"status":"ok"}` even if `AGENT_REPORTING_KEY` is missing. `/mcp` and OAuth metadata still require the production env vars.
 
 ### Project settings (Vercel dashboard)
 
@@ -42,8 +46,8 @@ Create or update the project from `lightningtransport/chatgpt-plugin` with:
 | --- | --- |
 | Framework Preset | **Node.js** (`node`). Not Other + static output. |
 | Root Directory | Repository root (do not set `mcp-server`; knowledge files live at the root) |
-| Install Command | `npm ci --prefix mcp-server` (from `vercel.json`) |
-| Build Command | Auto-detect / empty. **Do not** set `npm run build --prefix mcp-server` |
+| Install Command | `npm ci --prefix mcp-server --include=dev` (from `vercel.json`) |
+| Build Command | `npm run build` (uses `npx tsc` in `mcp-server`) |
 | Output Directory | Empty / unused. **Do not** set `public` |
 | Node.js Version | 22.x or 24.x (`engines.node` is `>=22`) |
 | Fluid Compute | On (`fluid: true`) |
@@ -92,8 +96,9 @@ The container must not contain `.env`, secrets, or a database credential. Config
 
 ## Troubleshooting
 
-- Vercel `No Output Directory named "public"`: the project is still on the Other/static builder. Confirm `vercel.json` has `"framework": "node"`, `"buildCommand": null`, `"outputDirectory": null`, and the dashboard Build Command / Output Directory are not still set to `tsc` / `public`.
-- `500` at startup in production: OAuth variables are missing or development auth is still selected.
+- Vercel `tsc: command not found` / `npm run build` exit 127: `NODE_ENV=production` skipped `devDependencies`. Confirm `vercel.json` uses `npm ci --prefix mcp-server --include=dev`, `typescript` is a dependency, and the build script is `npx tsc`.
+- Vercel `No Output Directory named "public"`: the project is still on the Other/static builder. Confirm `vercel.json` has `"framework": "node"`, `"outputDirectory": null`, and the dashboard Output Directory is not set to `public`.
+- `500` on `/mcp` at startup in production: OAuth variables are missing or development auth is still selected. `/health` should still return `{"status":"ok"}`.
 - `401`: inspect protected-resource metadata, issuer/audience, JWKS, scopes, and the Auth0 redirect allowlist.
 - `503`/`504`: inspect host egress, upstream gateway availability, and timeout settings.
 - Missing or stale tools: restart/refresh the ChatGPT MCP connection after metadata changes.
