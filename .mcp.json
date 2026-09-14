@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "lightning-transport-reporting": {
+      "url": "https://HOST/mcp"
+    }
+  }
+}

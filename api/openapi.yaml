@@ -1,0 +1,301 @@
+openapi: 3.1.0
+info:
+  title: Lightning Reporting APIs
+  version: 2.0.0
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+  description: >-
+    Read-only reporting interfaces for approved AI service accounts and individual
+    Supabase Auth members. Read AGENTS.md and the authenticated catalog before querying.
+servers:
+  - url: https://aaqquwhdglueqlnbifvn.supabase.co/functions/v1
+paths:
+  /agent-reporting:
+    get:
+      operationId: runAgentReportingQuery
+      summary: Query an approved table/report with a scoped agent key.
+      description: >-
+        Explicit report requests use strict validation and pagination. A request that
+        omits report is a legacy settlement_summary request, authorized as
+        settlement_summary, with the unchanged successful {count,data} response shape.
+      security:
+        - agentKey: []
+      parameters:
+        - name: report
+          in: query
+          schema:
+            type: string
+            enum: [catalog, settlement_summary, settlements, driver_pay, drivers, returns, trucks]
+          description: Required for the strict contract. Use catalog for discovery.
+        - name: metadata
+          in: query
+          schema: {type: boolean}
+          description: With a data report, return its schema/rules. No other parameters are allowed.
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 1000, default: 100}
+        - name: offset
+          in: query
+          schema: {type: integer, minimum: 0, maximum: 100000, default: 0}
+        - name: include_sensitive
+          in: query
+          schema: {type: boolean, default: false}
+          description: All approved AGENT_API_KEY principals can request the explicit sensitive-field allowlist by default; a matching AGENT_ALLOW_SENSITIVE control set to false restricts a specific key.
+        - name: truck
+          in: query
+          schema: {type: string}
+          description: Exact settlements/returns truck identifier. In settlement reports only, 1/2/3 identify documented non-physical owner-expense allocation buckets.
+        - name: truck_number
+          in: query
+          schema: {type: string}
+          description: Exact DriverPay truck, or numeric current-trucks lookup according to report metadata.
+        - name: driver_id
+          in: query
+          schema: {type: string}
+        - name: owner
+          in: query
+          schema: {type: string}
+        - name: dispatch
+          in: query
+          schema: {type: string}
+        - name: dispatcher
+          in: query
+          schema: {type: string}
+        - name: insurance
+          in: query
+          schema: {type: string}
+        - name: to_report
+          in: query
+          schema: {type: string}
+          description: Exact stored value; never use alone to infer the current settlement cycle.
+        - name: period_from
+          in: query
+          schema: {$ref: '#/components/schemas/IsoDate'}
+          description: Inclusive lower bound on settlement From date.
+        - name: period_to
+          in: query
+          schema: {$ref: '#/components/schemas/IsoDate'}
+          description: Inclusive upper bound on settlement From date.
+        - name: out_from
+          in: query
+          schema: {$ref: '#/components/schemas/IsoDate'}
+        - name: out_to
+          in: query
+          schema: {$ref: '#/components/schemas/IsoDate'}
+        - name: return_from
+          in: query
+          schema: {$ref: '#/components/schemas/IsoDate'}
+        - name: return_to
+          in: query
+          schema: {$ref: '#/components/schemas/IsoDate'}
+        - name: transfer
+          in: query
+          schema: {type: string}
+        - name: termination
+          in: query
+          schema: {type: string}
+        - name: solo
+          in: query
+          schema: {type: boolean}
+        - name: temporal_driver
+          in: query
+          schema: {type: string, enum: [Yes, No]}
+        - name: name
+          in: query
+          schema: {type: string}
+        - name: first_name
+          in: query
+          schema: {type: string}
+        - name: last_name
+          in: query
+          schema: {type: string}
+        - name: state
+          in: query
+          schema: {type: string}
+        - name: company
+          in: query
+          schema: {type: string}
+        - name: min_experience
+          in: query
+          schema: {type: number}
+        - name: max_experience
+          in: query
+          schema: {type: number}
+        - name: hire_from
+          in: query
+          schema: {$ref: '#/components/schemas/IsoDate'}
+          description: Inclusive Date of Hire lower bound for drivers.
+        - name: hire_to
+          in: query
+          schema: {$ref: '#/components/schemas/IsoDate'}
+          description: Inclusive Date of Hire upper bound for drivers.
+        - name: ninox_id
+          in: query
+          schema: {type: number}
+          description: Exact numeric source-record ID for returns or trucks; it is not a driver ID.
+        - name: driver_name
+          in: query
+          schema: {type: string}
+        - name: yard_location
+          in: query
+          schema: {type: string}
+        - name: mechanic_status
+          in: query
+          schema: {type: string}
+        - name: make
+          in: query
+          schema: {type: string}
+        - name: min_odometer
+          in: query
+          schema: {type: number}
+        - name: max_odometer
+          in: query
+          schema: {type: number}
+        - name: min_model_year
+          in: query
+          schema: {type: number}
+        - name: max_model_year
+          in: query
+          schema: {type: number}
+
+      responses:
+        '200':
+          description: Catalog, metadata, explicit paginated data, or legacy data response.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/AgentDataResponse'}
+                  - {$ref: '#/components/schemas/LegacyResponse'}
+                  - {$ref: '#/components/schemas/CatalogResponse'}
+                  - {$ref: '#/components/schemas/MetadataResponse'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {description: Only GET is allowed.}
+        '416':
+          description: Requested offset is beyond the available result range.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '500': {description: "Sanitized audit, exact-count, or upstream reporting failure."}
+  /reporting-query:
+    post:
+      operationId: runMemberReportingQuery
+      summary: Run a membership/role-scoped report with a personal Supabase JWT.
+      description: Individual onboarding is currently paused; do not use shared credentials.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [report]
+              properties:
+                report:
+                  type: string
+                  enum: [fleet_status, current_returns, driver_assignments, settlement_summary]
+                filters:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200': {description: Role-authorized report result.}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+components:
+  securitySchemes:
+    agentKey:
+      type: apiKey
+      in: header
+      name: x-agent-key
+      description: Assigned agent secret. Never send in the URL or expose to a browser.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    IsoDate:
+      type: string
+      format: date
+      pattern: '^\d{4}-\d{2}-\d{2}$'
+    AgentDataResponse:
+      type: object
+      required: [schema_version, report, source, filters, offset, limit, count, page_count, total_count, has_more, next_offset, as_of, data, request_id]
+      properties:
+        schema_version: {type: string}
+        report: {type: string}
+        source: {type: string}
+        filters: {type: object, additionalProperties: {type: string}}
+        sort: {type: array, items: {type: string}}
+        offset: {type: integer}
+        limit: {type: integer}
+        count: {type: integer, description: "Compatibility alias for page_count; never the full total."}
+        page_count: {type: integer}
+        total_count: {type: integer}
+        has_more: {type: boolean}
+        next_offset: {type: [integer, 'null']}
+        sensitive_fields_included: {type: boolean}
+        as_of: {type: string, format: date-time}
+        source_freshness: {type: string}
+        caveats: {type: array, items: {type: string}}
+        data: {type: array, items: {type: object, additionalProperties: true}}
+        request_id: {type: string, format: uuid}
+    LegacyResponse:
+      type: object
+      additionalProperties: false
+      required: [count, data]
+      properties:
+        count: {type: integer}
+        data: {type: array, items: {type: object, additionalProperties: true}}
+    CatalogResponse:
+      type: object
+      additionalProperties: true
+      required: [schema_version, schema_verified_at, endpoint, method, authentication, principal, global_parameters, response_contract, guidance, reports]
+      properties:
+        schema_version: {type: string}
+        schema_verified_at: {type: string, format: date-time}
+        endpoint: {type: string, const: /functions/v1/agent-reporting}
+        method: {type: string, const: GET}
+        authentication: {type: string}
+        principal: {type: object, additionalProperties: true}
+        global_parameters: {type: object, additionalProperties: true}
+        response_contract: {type: object, additionalProperties: true}
+        guidance: {type: object, additionalProperties: true}
+        reports: {type: object, additionalProperties: true}
+    MetadataResponse:
+      type: object
+      additionalProperties: true
+      required: [schema_version, schema_verified_at, report, guidance, source]
+      properties:
+        schema_version: {type: string}
+        schema_verified_at: {type: string, format: date-time}
+        report: {type: string, enum: [settlement_summary, settlements, driver_pay, drivers, returns, trucks]}
+        guidance: {type: object, additionalProperties: true}
+        source: {type: string}
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: {type: string}
+        request_id: {type: string, format: uuid}
+  responses:
+    Invalid:
+      description: Unknown report/filter, duplicate parameter, invalid value/range, or missing anchor.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Unauthorized:
+      description: Missing, invalid, or expired credential.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Forbidden:
+      description: Valid credential without report or sensitive-field permission.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
