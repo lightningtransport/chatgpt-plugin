@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.3
+
+- Publish `/.well-known/oauth-protected-resource` `resource` as `OAUTH_AUDIENCE` (`https://lightning-reporting.vercel.app/mcp`), matching the Auth0 API identifier instead of the bare host.
+- Keep `authorization_servers` as `OAUTH_ISSUER`.
+- Point `WWW-Authenticate` `resource_metadata` at the RFC 9728 path-aware metadata URL derived from that audience.
+- Redirect ChatGPT `/.well-known/openid-configuration` and `/.well-known/oauth-authorization-server` probes on the MCP host to Auth0.
+
 ## 0.2.2
 
 - Fix Vercel production rebuilds when `NODE_ENV=production` is set: install TypeScript (`--include=dev`), keep `typescript` as a dependency, and invoke `npx tsc` so `npm run build` finds the local compiler.

@@ -18,7 +18,7 @@ function request(path: string, method = "GET"): Promise<{ status: number; header
       reject(new Error("Server is not listening."));
       return;
     }
-    fetch(`http://127.0.0.1:${address.port}${path}`, { method })
+    fetch(`http://127.0.0.1:${address.port}${path}`, { method, redirect: "manual" })
       .then(async (response) => {
         resolve({
           status: response.status,
@@ -73,20 +73,45 @@ describe("HTTP endpoints", () => {
     }
   });
 
-  it("publishes OAuth protected-resource metadata", async () => {
+  it("publishes OAuth protected-resource metadata using OAUTH_AUDIENCE", async () => {
     const response = await request("/.well-known/oauth-protected-resource");
     expect(response.status).toBe(200);
     const body = JSON.parse(response.body) as {
+      resource: string;
       authorization_servers: string[];
       scopes_supported: string[];
     };
+    expect(body.resource).toBe("https://lightning-reporting.vercel.app/mcp");
     expect(body.authorization_servers).toEqual(["https://dev-50ed1gzziwaws2zo.us.auth0.com/"]);
     expect(body.scopes_supported).toEqual(["reporting:read"]);
   });
 
-  it("challenges unauthenticated /mcp requests", async () => {
+  it("publishes the same metadata at the RFC 9728 path-aware URL", async () => {
+    const response = await request("/.well-known/oauth-protected-resource/mcp");
+    expect(response.status).toBe(200);
+    const body = JSON.parse(response.body) as { resource: string };
+    expect(body.resource).toBe("https://lightning-reporting.vercel.app/mcp");
+  });
+
+  it("redirects authorization-server discovery probes to Auth0", async () => {
+    const oidc = await request("/.well-known/openid-configuration");
+    expect(oidc.status).toBe(302);
+    expect(oidc.headers.get("location")).toBe(
+      "https://dev-50ed1gzziwaws2zo.us.auth0.com/.well-known/openid-configuration",
+    );
+
+    const oauth = await request("/.well-known/oauth-authorization-server");
+    expect(oauth.status).toBe(302);
+    expect(oauth.headers.get("location")).toBe(
+      "https://dev-50ed1gzziwaws2zo.us.auth0.com/.well-known/oauth-authorization-server",
+    );
+  });
+
+  it("challenges unauthenticated /mcp requests with a matching resource_metadata URL", async () => {
     const response = await request("/mcp", "POST");
     expect(response.status).toBe(401);
-    expect(response.headers.get("www-authenticate")).toContain("oauth-protected-resource");
+    expect(response.headers.get("www-authenticate")).toContain(
+      'resource_metadata="https://lightning-reporting.vercel.app/.well-known/oauth-protected-resource/mcp"',
+    );
   });
 });
