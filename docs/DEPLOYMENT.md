@@ -8,9 +8,9 @@ Vercel’s Node.js backend captures `createServer()` + `listen()` **in the root 
 
 The root entry now:
 
-1. Calls `createServer()` and `listen(PORT)` in `server.ts` (the documented pattern).
-2. Answers `GET /health` from pathname with **no MCP imports** at module load (`{"status":"ok"}` even if `dist` fails to boot).
-3. Dynamically imports the compiled handler from `mcp-server/dist/server.js` for `/mcp` and OAuth metadata.
+1. Calls `createServer()` and `listen(PORT)` in `server.ts` (the documented Node.js pattern). **Do not** also `export default` the server — that dual binding hung production workers.
+2. Answers `GET /health` from pathname with **no MCP imports** at module load.
+3. Dynamically imports `mcp-server/src/server.ts` for `/mcp` and OAuth metadata. Vercel compiles that TypeScript; do **not** set a root `build` script (it makes Vercel run `tsc` and has broken the Node server).
 
 Do **not** add a `src/server.ts` symlink — Vercel also looks at `src/server` as an entrypoint and that competed with the root file.
 
@@ -30,11 +30,11 @@ Committed at the repository root (this is the source of truth; it overrides dash
   "framework": "node",
   "fluid": true,
   "installCommand": "npm ci --prefix mcp-server --include=dev",
-  "buildCommand": "npm run build",
+  "buildCommand": null,
   "outputDirectory": null,
   "functions": {
     "server.ts": {
-      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**,mcp-server/dist/**}"
+      "includeFiles": "{AGENTS.md,docs/**,api/openapi.yaml,skills/**,mcp-server/src/**}"
     }
   }
 }
@@ -57,7 +57,7 @@ Create or update the project from `lightningtransport/chatgpt-plugin` with:
 | Framework Preset | **Node.js** (`node`). Not Other + static output. |
 | Root Directory | Repository root (do not set `mcp-server`; knowledge files live at the root) |
 | Install Command | `npm ci --prefix mcp-server --include=dev` (from `vercel.json`) |
-| Build Command | `npm run build` (uses `npx tsc` in `mcp-server`) |
+| Build Command | Auto-detect / empty. Do **not** set `npm run build` (Vercel compiles `server.ts`) |
 | Output Directory | Empty / unused. **Do not** set `public` |
 | Node.js Version | 22.x or 24.x (`engines.node` is `>=22`) |
 | Fluid Compute | On (`fluid: true`) |
