@@ -110,8 +110,12 @@ describe("HTTP endpoints", () => {
   it("challenges unauthenticated /mcp requests with a matching resource_metadata URL", async () => {
     const response = await request("/mcp", "POST");
     expect(response.status).toBe(401);
+    expect(JSON.parse(response.body)).toEqual({ error: "Missing bearer token." });
     expect(response.headers.get("www-authenticate")).toContain(
       'resource_metadata="https://lightning-reporting.vercel.app/.well-known/oauth-protected-resource/mcp"',
+    );
+    expect(response.headers.get("www-authenticate")).toContain(
+      'error_description="Missing bearer token."',
     );
   });
 });

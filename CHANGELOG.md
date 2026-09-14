@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4
+
+- Accept Auth0 RBAC `permissions` (and RFC 9068 `scp`) in addition to space-delimited `scope` when checking `OAUTH_SCOPE` (`reporting:read`) on MCP bearer tokens.
+- Distinguish 401 `error_description` for missing bearer, invalid JWT, and missing scope without logging token values.
+
 ## 0.2.3
 
 - Publish `/.well-known/oauth-protected-resource` `resource` as `OAUTH_AUDIENCE` (`https://lightning-reporting.vercel.app/mcp`), matching the Auth0 API identifier instead of the bare host.

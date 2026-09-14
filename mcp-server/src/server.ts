@@ -1,7 +1,8 @@
 import { createServer as createHttpServer, IncomingMessage, ServerResponse } from "node:http";
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { createRemoteJWKSet } from "jose";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { authenticate } from "./auth.js";
 import { type Config, loadConfig } from "./config.js";
 import { loadDocuments } from "./knowledge.js";
 import { ReportingClient } from "./reporting-client.js";
@@ -98,36 +99,6 @@ export async function handleRequest(request: IncomingMessage, response: ServerRe
 const httpServer = createHttpServer((request, response) => {
   void handleRequest(request, response);
 });
-
-async function authenticate(
-  request: IncomingMessage,
-  config: Config,
-  jwks: Runtime["jwks"],
-): Promise<{ ok: boolean; message?: string }> {
-  if (config.MCP_AUTH_MODE === "development") return { ok: true };
-  const value = request.headers.authorization;
-  if (!value?.startsWith("Bearer ") || !jwks || !config.OAUTH_ISSUER || !config.OAUTH_AUDIENCE) {
-    return { ok: false, message: "Authentication required." };
-  }
-  try {
-    const verified = await jwtVerify(value.slice("Bearer ".length), jwks, {
-      issuer: config.OAUTH_ISSUER,
-      audience: config.OAUTH_AUDIENCE,
-      requiredClaims: ["sub"],
-    });
-    const scopes = typeof verified.payload.scope === "string"
-      ? verified.payload.scope.split(/\s+/)
-      : Array.isArray(verified.payload.scp)
-        ? verified.payload.scp.map(String)
-        : [];
-    if (!scopes.includes(config.OAUTH_SCOPE)) {
-      return { ok: false, message: "Required reporting scope is missing." };
-    }
-    return { ok: true };
-  } catch {
-    return { ok: false, message: "Authentication failed." };
-  }
-}
 
 function rateLimit(config: Config): boolean {
   const now = Date.now();
