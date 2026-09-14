@@ -28,10 +28,10 @@ Set these in the Vercel project (Production and Preview as appropriate). Mark se
 | `AGENT_REPORTING_ENDPOINT` | no | Defaults to the documented Supabase Edge Function URL |
 | `NODE_ENV` | yes in production | `production` |
 | `MCP_AUTH_MODE` | yes in production | `oauth` |
-| `OAUTH_ISSUER` | yes in production | `https://YOUR_TENANT.auth0.com/` (trailing slash) |
-| `OAUTH_AUDIENCE` | yes in production | Canonical MCP resource, usually `https://YOUR_DEPLOYMENT.vercel.app` |
-| `OAUTH_JWKS_URL` | yes in production | `https://YOUR_TENANT.auth0.com/.well-known/jwks.json` |
-| `OAUTH_SCOPE` | no | Defaults to `reporting:read` |
+| `OAUTH_ISSUER` | yes in production | `https://dev-50ed1gzziwaws2zo.us.auth0.com/` (trailing slash) |
+| `OAUTH_AUDIENCE` | yes in production | Placeholder `https://lightning-reporting.vercel.app/mcp` until the real Vercel URL exists |
+| `OAUTH_JWKS_URL` | yes in production | `https://dev-50ed1gzziwaws2zo.us.auth0.com/.well-known/jwks.json` |
+| `OAUTH_SCOPE` | no | `reporting:read` |
 | `REPORTING_KNOWLEDGE_ROOT` | no | Defaults to the deployment working directory (repository root) |
 | `MCP_REQUEST_TIMEOUT_MS` | no | Default `30000` |
 | `MCP_RATE_LIMIT_RPM` | no | Default `60` |

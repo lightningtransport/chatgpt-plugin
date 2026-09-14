@@ -4,9 +4,9 @@ process.env.NODE_ENV = "test";
 process.env.MCP_AUTH_MODE = "oauth";
 process.env.AGENT_REPORTING_KEY = "test-only-key";
 process.env.AGENT_REPORTING_ENDPOINT = "https://example.test/functions/v1/agent-reporting";
-process.env.OAUTH_ISSUER = "https://example.auth0.com/";
-process.env.OAUTH_AUDIENCE = "https://example.vercel.app";
-process.env.OAUTH_JWKS_URL = "https://example.auth0.com/.well-known/jwks.json";
+process.env.OAUTH_ISSUER = "https://dev-50ed1gzziwaws2zo.us.auth0.com/";
+process.env.OAUTH_AUDIENCE = "https://lightning-reporting.vercel.app/mcp";
+process.env.OAUTH_JWKS_URL = "https://dev-50ed1gzziwaws2zo.us.auth0.com/.well-known/jwks.json";
 process.env.OAUTH_SCOPE = "reporting:read";
 
 const { httpServer } = await import("../src/server.js");
@@ -56,7 +56,7 @@ describe("HTTP endpoints", () => {
       authorization_servers: string[];
       scopes_supported: string[];
     };
-    expect(body.authorization_servers).toEqual(["https://example.auth0.com/"]);
+    expect(body.authorization_servers).toEqual(["https://dev-50ed1gzziwaws2zo.us.auth0.com/"]);
     expect(body.scopes_supported).toEqual(["reporting:read"]);
   });
 

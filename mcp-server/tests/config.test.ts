@@ -36,13 +36,13 @@ describe("loadConfig", () => {
       MCP_AUTH_MODE: "oauth",
       AGENT_REPORTING_KEY: "test-only-key",
       AGENT_REPORTING_ENDPOINT: "https://example.test/functions/v1/agent-reporting",
-      OAUTH_ISSUER: "https://example.auth0.com/",
-      OAUTH_AUDIENCE: "https://example.vercel.app",
-      OAUTH_JWKS_URL: "https://example.auth0.com/.well-known/jwks.json",
+      OAUTH_ISSUER: "https://dev-50ed1gzziwaws2zo.us.auth0.com/",
+      OAUTH_AUDIENCE: "https://lightning-reporting.vercel.app/mcp",
+      OAUTH_JWKS_URL: "https://dev-50ed1gzziwaws2zo.us.auth0.com/.well-known/jwks.json",
       OAUTH_SCOPE: "reporting:read",
     });
     expect(config.MCP_AUTH_MODE).toBe("oauth");
     expect(config.OAUTH_SCOPE).toBe("reporting:read");
-    expect(config.OAUTH_ISSUER).toBe("https://example.auth0.com/");
+    expect(config.OAUTH_ISSUER).toBe("https://dev-50ed1gzziwaws2zo.us.auth0.com/");
   });
 });

@@ -12,7 +12,7 @@ Read-only ChatGPT / MCP plugin for Lightning Transportation reporting. Live data
 
 - The server exposes document retrieval plus report catalog, metadata, and approved reporting calls—never raw Supabase tables or SQL.
 - `AGENT_REPORTING_KEY` is a server-only deployment secret. Do not add it to Git, a ChatGPT action, browser app, prompt, or URL.
-- Production requires Auth0 OAuth (`MCP_AUTH_MODE=oauth`) with `OAUTH_ISSUER`, `OAUTH_AUDIENCE`, `OAUTH_JWKS_URL`, and `OAUTH_SCOPE=reporting:read`.
+- Production requires Auth0 OAuth (`MCP_AUTH_MODE=oauth`) against tenant `https://dev-50ed1gzziwaws2zo.us.auth0.com/` with `OAUTH_ISSUER`, `OAUTH_AUDIENCE`, `OAUTH_JWKS_URL`, and `OAUTH_SCOPE=reporting:read`.
 - The connector is read-only. Do not add mutation tools without a separate approval and threat-model review.
 
 ## Local verification

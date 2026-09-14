@@ -8,12 +8,13 @@ Do not expose development mode on a public hostname.
 
 ## Production (Auth0)
 
-Use Auth0 as the OAuth 2.1 / OIDC provider. The MCP server expects:
+Use Auth0 as the OAuth 2.1 / OIDC provider. The Lightning tenant and MCP server expect:
 
+- Tenant: `https://dev-50ed1gzziwaws2zo.us.auth0.com/`
 - `MCP_AUTH_MODE=oauth`
-- `OAUTH_ISSUER` — Auth0 domain issuer, including the trailing slash (example: `https://YOUR_TENANT.auth0.com/`)
-- `OAUTH_AUDIENCE` — the canonical MCP resource, normally the public HTTPS origin of the Vercel deployment
-- `OAUTH_JWKS_URL` — `https://YOUR_TENANT.auth0.com/.well-known/jwks.json`
+- `OAUTH_ISSUER=https://dev-50ed1gzziwaws2zo.us.auth0.com/` (trailing slash required)
+- `OAUTH_AUDIENCE=https://lightning-reporting.vercel.app/mcp` (placeholder until the real Vercel URL is provisioned; then set the API identifier to that canonical MCP resource)
+- `OAUTH_JWKS_URL=https://dev-50ed1gzziwaws2zo.us.auth0.com/.well-known/jwks.json`
 - `OAUTH_SCOPE=reporting:read`
 - a token containing `sub`, matching issuer/audience, expiry, and the `reporting:read` scope
 
@@ -21,7 +22,7 @@ The server publishes `/.well-known/oauth-protected-resource` and returns a `WWW-
 
 ### Auth0 application and API
 
-1. Create an Auth0 API whose identifier equals `OAUTH_AUDIENCE`.
+1. Create an Auth0 API whose identifier equals `OAUTH_AUDIENCE` (currently the placeholder `https://lightning-reporting.vercel.app/mcp` until the real Vercel URL exists).
 2. Add the permission / scope `reporting:read` and include it in issued access tokens.
 3. Create an application that supports Authorization Code + PKCE.
 4. Add the ChatGPT plugin redirect URI to Allowed Callback URLs.
