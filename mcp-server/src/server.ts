@@ -152,7 +152,11 @@ function protectedResourceMetadata(config: Config) {
   }
   return {
     resource: canonicalMcpResource(config),
-    authorization_servers: [config.OAUTH_ISSUER],
+    // ChatGPT/Codex uses CIMD. Auth0 remains the token issuer, but the bridge
+    // is the authorization server exposed to MCP clients.
+    authorization_servers: process.env.OAUTH_BRIDGE_CLIENT_ID && process.env.OAUTH_BRIDGE_SECRET
+      ? ["https://lightning-reporting.vercel.app/oauth"]
+      : [config.OAUTH_ISSUER],
     scopes_supported: [config.OAUTH_SCOPE],
   };
 }
