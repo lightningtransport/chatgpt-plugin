@@ -1,12 +1,22 @@
 import { z } from "zod";
 import { fetchDocument, searchDocuments } from "./knowledge.js";
 import { ReportingClient, ReportName, ReportingRow, ReportingResponse } from "./reporting-client.js";
+import { REPORTING_VIEW_URI } from "./ui.js";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD.");
 const limit = z.number().int().min(1).max(100).default(20);
 const output = z.object({}).passthrough();
 
 export function registerTools(server: any, client: ReportingClient, documents: Map<string, string>) {
+  server.registerTool("render_reporting_view", {
+    title: "Render a Lightning reporting view",
+    description: "Render a read-only visual report from a previous Lightning reporting tool result. Always call the data tool first, preserve its status, evidence, and limitations, then pass the complete structured result here. This does not fetch or alter data.",
+    inputSchema: { title: z.string().min(1).max(120), data: output },
+    outputSchema: z.object({ title: z.string(), data: output }),
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: { ui: { resourceUri: REPORTING_VIEW_URI }, "openai/toolInvocation/invoking": "Rendering report…", "openai/toolInvocation/invoked": "Report view ready." },
+  }, async ({ title, data }: { title: string; data: Record<string, unknown> }) => result({ title, data }, `Rendered the ${title} view.`));
+
   server.registerTool("search", {
     title: "Search Lightning reporting documentation",
     description: "Use this to find canonical Lightning reporting rules, metric definitions, and API guidance. Follow with fetch for the relevant document.",

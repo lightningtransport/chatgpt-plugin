@@ -7,6 +7,8 @@ import { type Config, loadConfig } from "./config.js";
 import { loadDocuments } from "./knowledge.js";
 import { ReportingClient } from "./reporting-client.js";
 import { registerTools } from "./tools.js";
+import { registerReportingView } from "./ui.js";
+import { handleOAuthBridge } from "./oauth-bridge.js";
 
 type Runtime = {
   config: Config;
@@ -38,6 +40,7 @@ export function createMcpServer(client: ReportingClient, documents: Map<string, 
         "This is a read-only Lightning reporting server. Use live report metadata before unfamiliar queries, never request SQL or mutations, and state source, filters, period, counts, pagination completeness, as_of, freshness limitations, and material caveats.",
     },
   );
+  registerReportingView(server);
   registerTools(server, client, documents);
   return server;
 }
@@ -53,6 +56,8 @@ function requestPath(url: string | undefined): string {
 
 export async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
   try {
+    const bridgeUrl = new URL(request.url ?? "/", "https://lightning-reporting.vercel.app");
+    if (await handleOAuthBridge(request, response, bridgeUrl)) return;
     if (request.method === "OPTIONS") {
       response.writeHead(204, corsHeaders());
       response.end();

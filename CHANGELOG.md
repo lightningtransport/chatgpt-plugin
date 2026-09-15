@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5
+
+- Add a portable, read-only MCP Apps reporting view. `render_reporting_view` renders the complete structured result from a prior governed report call, including partial/blocked-data limitations and evidence, without making browser-side data requests.
+
 ## 0.2.4
 
 - Accept Auth0 RBAC `permissions` (and RFC 9068 `scp`) in addition to space-delimited `scope` when checking `OAUTH_SCOPE` (`reporting:read`) on MCP bearer tokens.
